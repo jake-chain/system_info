@@ -11,64 +11,75 @@
     {# JavaScript do Bootstrao 4 #}
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </head>
-<body class="change-theme bg-dark">
+<body class="change-theme bg-dark text-white">
 <div class="container my-4">
     <div class="row">
+        {# Apenas o título #}
         <div class="col-12 col-md-6 col-lg-4 col-xl-3">
             <h1 class="text-light change-theme">System Info</h1>
         </div>
-        <div class="col-12 col-md-6 col-lg-4 col-xl-3 offset-xl-3">
+        {# Opção para alterar o tema da página #}
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3 offset-xl-3 mt-2">
             <div class="custom-control custom-switch">
                 <input type="checkbox" class="custom-control-input" id="changeTheme" checked>
                 <label class="custom-control-label" for="changeTheme">Dark mode</label>
             </div>
         </div>
+        {# Opção para pesquisa dentro das informações do sistema #}
         <div class="col-12 col-md-12 col-lg-4 col-xl-3">
             <input class="form-control bg-transparent" type="search" name="search" id="search"
                    placeholder="Pesquisar...">
         </div>
     </div>
     <br>
+    <br>
     <div class="row">
-        <div class="col-12">
-            <h4 class="text-light change-theme">
-                <span>File:</span>
-                {% if data_file %}
-                    <small class="text-info">{{ file_name }}</small>
-                {% else %}
-                    <br>
-                    <br>
-                    <form action="" method="post">
-                        {% csrf_token %}
-                        <input type="text" name="fileName" class="bg-transparent form-control" required
-                               placeholder="press enter">
-                    </form>
-                {% endif %}
-            </h4>
+        {# Informações do sistema #}
+        <div class="col-12 col-md-12 col-lg-8">
+            {# Verifica se as informações foram consultadas #}
+            {% if data_file %}
+                {# Percorrendo cada informação do sistema #}
+                {% for code, level in data_file.items %}
+                    {% if level.sub_level_id == None %}
+                        <div class="row iten-category {{ level.category }}">
+                            {# Informações de primeiro nível #}
+                            <div class="col-12 mt-4 line">
+                                <a href="javascript:" data-id="{{ code }}" class="showSubLevel">
+                                    <pre class="text-light change-theme">* {{ level.text }}</pre>
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="row">
+                            {# Informações de subníveis #}
+                            <div class="id-{{ level.sub_level_id }} d-none col-{{ level.offset }}"></div>
+                            <div class="id-{{ level.sub_level_id }} d-none col-10">
+                                <pre class="text-light change-theme">- {{ level.text }}</pre>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+        {# Filtros #}
+        <div class="col-12 col-md-12 col-lg-4">
+            {# Título #}
+            <div class="row">
+                <div class="col-12">
+                    <h4>Categorias</h4>
+                </div>
+            </div>
+            {# Categorias #}
+            <div class="row">
+                {% for category in categories %}
+                    <div class="col-12">
+                        <button id="{{ category }}" class="btn-category btn btn-link bg-transparent">
+                            * {{ category }}</button>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
-    <br>
-    <br>
-    {% if data_file %}
-        {% for code, level in data_file.items %}
-            <div class="row">
-                {% if level.sub_level_id == None %}
-                    <div class="col-11 mt-4" style="border-left: #005cbf solid 1px; border-top: #005cbf solid 1px">
-                        <pre class="text-light change-theme">{{ level.text }}</pre>
-                    </div>
-                    <div class="col-1 mt-4" style="border-top: #005cbf solid 1px">
-                        <a href="javascript:" data-id="{{ code }}" class="showSubLevel">Show</a>
-                    </div>
-                {% else %}
-                    <div class="id-{{ level.sub_level_id }} d-none col-{{ level.offset }}"
-                         style="border-left: #005cbf solid 1px"></div>
-                    <div class="id-{{ level.sub_level_id }} d-none col-10">
-                        <pre class="text-light change-theme">{{ level.text }}</pre>
-                    </div>
-                {% endif %}
-            </div>
-        {% endfor %}
-    {% endif %}
 </div>
 <br>
 <script>
@@ -90,23 +101,47 @@
         }
     })
 
-    $('#changeTheme').on('change', function () {
-        if ($(this).prop('checked')) {
-            $(this).attr('theme', 'light')
-            $('.change-theme').attr('class', 'change-theme bg-dark text-light')
+    $('.btn-category').on('click', function () {
+        let category = 'category-' + $(this).prop('id').replaceAll(' ', '-')
+        if (category === 'category-all') {
+            $(`.iten-category`).removeClass('d-none')
         } else {
-            $(this).attr('theme', 'dark')
-            $('.change-theme').attr('class', 'change-theme')
+            $(`.iten-category`).addClass('d-none')
+            $(`.${category}`).removeClass('d-none')
         }
     })
+
+    $('#changeTheme').on('change', function () {
+        if ($(this).prop('checked')) {
+            enebleDarkTheme(this)
+        } else {
+            disableDarkTheme(this)
+        }
+    })
+
+    /**
+     * Ativa o tema escuro do sistema
+     * @param selector botão no qual foi disparada a ação
+     */
+    function enebleDarkTheme(selector) {
+        $(selector).attr('theme', 'dark')
+        $('.change-theme').attr('class', 'change-theme bg-dark text-light')
+    }
+
+    /**
+     * Desativa o tema escuro do sistema
+     * @param selector botão no qual foi disparada a ação
+     */
+    function disableDarkTheme(selector) {
+        $(selector).attr('theme', 'dark')
+        $('.change-theme').attr('class', 'change-theme')
+    }
 
     $('.showSubLevel').on('click', function () {
         let elements = $('.id-' + $(this).data('id'))
         if (elements.hasClass('d-none')) {
-            $(this).text('Hide')
             elements.removeClass('d-none')
         } else {
-            $(this).text('Show')
             elements.addClass('d-none')
         }
     })
