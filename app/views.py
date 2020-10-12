@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from django.http import HttpResponse
 from django.shortcuts import render
 
@@ -75,34 +76,41 @@ def read_system_info() -> dict:
     return data_file
 
 
-def decode_stdout(executed: subprocess.CompletedProcess) -> str or None:
+def decode_stdout(executed: subprocess.CompletedProcess or None) -> str or None:
     """
     Nessa função é convertido o retorno de uma execução do subprocess para o formato str de acordo com o sistema operacional atual
     :param executed: Uma instância de CompletedProcess
     :return: str com as informações da execução do processo ou um None em caso de falha
     """
 
-    # Verificando qual é o sistema operacional atual para realizar a devida conversão
-    if get_system() == 'W':
-        # Conversão para o Windows
-        return executed.stdout.decode('ISO-8859-1') if executed.returncode == 0 else None
+    # Verifica se o parâmetro de entrada não está vazio
+    if executed is not None:
+        # Verificando qual é o sistema operacional atual para realizar a devida conversão
+        if get_system() == 'W':
+            # Conversão para o Windows
+            return executed.stdout.decode('ISO-8859-1') if executed.returncode == 0 else None
+        else:
+            # Conversão para os sistema baseados no Linux
+            return executed.stdout.decode('UTF-8') if executed.returncode == 0 else None
     else:
-        # Conversão para os sistema baseados no Linux
-        return executed.stdout.decode('UTF-8') if executed.returncode == 0 else None
+        return None
 
 
-def execute_subprocess() -> subprocess.CompletedProcess:
+def execute_subprocess() -> subprocess.CompletedProcess or None:
     """
     Função para executar um comando no terminal utilizando a biblioteca do subprocess para captura do retorno
     A função em questão é uma consulta das informações do sistemas
     :return: CompletedProcess A instância da execução do comando
     """
 
-    # Verificando qual o sistema operacional atual para executar o devido comando
-    if get_system() == 'W':
-        return subprocess.run(['sudo', 'dmidecode', '-', 'TYPE17'], stdout=subprocess.PIPE)
-    else:
-        return subprocess.run(['sudo', 'dmidecode', '-', 'TYPE17'], stdout=subprocess.PIPE)
+    try:
+        # Verificando qual o sistema operacional atual para executar o devido comando
+        if get_system() == 'W':
+            return subprocess.run(['systeminfo'], stdout=subprocess.PIPE, shell=True)
+        else:
+            return subprocess.run(['sudo', 'dmidecode', '-', 'TYPE17'], stdout=subprocess.PIPE)
+    except Exception as e:
+        return get_error(e)
 
 
 def get_system() -> str:
@@ -114,12 +122,21 @@ def get_system() -> str:
 
 
 def get_category(text: str) -> str:
+    """
+    Nessa função, é identificado a que categoria a informação do sistema pertence
+    :param text: informação a ser vategorizada
+    :return: str O código da categoria
+    """
+
+    # Converte o texto para letras minúsculas
     text = text.lower()
-
+    # Percorre as categorias pre definidas
     for category in categories:
+        # Verifica se a categoria está contida no texto
         if category in text:
+            # Retorna a categoria encontrada
             return 'category-' + category.replace(' ', '-')
-
+    # Caso não encontre nenhuma categoria relacionada, retorna 'outros'
     return 'category-others'
 
 
@@ -138,3 +155,37 @@ def check_level(line) -> int:
     else:
         # Caso não tenha mais recuo, retorna apenas 1, ou seja, sem recuo
         return 1
+
+
+def get_error(erro) -> None:
+    """
+    Função para captura de tratamento de exceções e escrita do erro no arquivo
+    :param erro: Excption
+    :return: None
+    """
+
+    # Abrindo o arquivo para escrita
+    file_log = open_file('logs', 'a')
+    # Escrevendo o erro ocrorrido no arquivo
+    file_log.write("Hora: " + time.strftime("%H:%M:%S") + "\nError: " + str(erro) + "\n\n")
+    # Fechando o arquivo
+    file_log.close()
+
+
+def open_file(file, method):
+    """
+    Apenas abre um determinado arquivo em um determinado mode de leitura
+    :param file: Arquivo a ser aberto
+    :param method: Modo de leitura
+    :return: IO instância do arquivo
+    """
+    return open(get_path(file), method)
+
+
+def get_path(file="") -> str:
+    """
+    Retorna o caminho do arquivo de maneira dinâmica
+    :param file: Nome do arquivo
+    :return: std O caminho completo do arquivo
+    """
+    return os.path.abspath(file)
